@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 import path from 'path';
 import fs from 'fs';
 import { execSync } from 'child_process';
@@ -12,29 +14,39 @@ import colors from 'colors';
 // ST 您所在的省/市/自治区名称是什么?
 // C  该单位的双字母国家/地区代码是什么?
 
-const signPath = path.resolve('android/release.keystore');
+const name = 'release.keystore';
+const signPath = path.resolve(`android/app/${name}`);
 
 const createSignature = () => {
     const storePassword = uniqueString();
     const keyPassword = uniqueString();
     const alias = path.basename(process.cwd());
 
-    execSync(`keytool -genkey -v -storetype PKCS12 -keyalg RSA -keysize 2048 -validity 10000 -keystore "${signPath}" -storepass "${storePassword}" -alias "${alias}" -keypass "${keyPassword}" -dname "CN=NoName, O=NoOrg, C=NoCountry"`);
+    execSync(`keytool -genkey -v -keyalg RSA -keysize 2048 -validity 10000 -keystore "${signPath}" -storepass "${storePassword}" -alias "${alias}" -keypass "${keyPassword}" -dname "CN=NoName, O=NoOrg, C=NoCountry"`);
 
     console.log('');
     console.log(colors.bgBlack(colors.white('Copy green color code from below to file: ./android/app/build.gradle')));
-    console.log('android {\n    ...');
-    console.log(colors.green(`
+    console.log(`android {
+    ...
     signingConfigs {
+        ...
         release {
-            storeFile file(../release.keystore)
-            storePassword "${storePassword}"
-            keyAlias "${alias}"
-            keyPassword "${keyPassword}"
+            ${colors.green(`storeFile file('${name}')`)}
+            ${colors.green(`storePassword "${storePassword}"`)}
+            ${colors.green(`keyAlias "${alias}"`)}
+            ${colors.green(`keyPassword "${keyPassword}"`)}
         }
     }
-    `));
-    console.log('    ...\n}');
+
+    buildTypes {
+        ...
+        release {
+            ...
+            ${colors.green('signingConfig signingConfigs.release')}
+        }
+    }
+    ...
+}`);
 };
 
 if (fs.existsSync(signPath)) {
